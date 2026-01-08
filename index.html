@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vani's D2D interactions using AI</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0; padding: 20px;
+            display: flex; justify-content: center;
+        }
+
+        .container {
+            width: 100%; max-width: 700px;
+            background: var(--card-bg);
+            padding: 2.5rem; border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.8rem; text-align: center; margin: 0;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .tagline { text-align: center; color: #64748b; margin-bottom: 2rem; font-size: 0.9rem; }
+
+        .input-group { display: flex; flex-direction: column; gap: 15px; }
+
+        input {
+            width: 100%; padding: 16px; border: 2px solid #e2e8f0;
+            border-radius: 14px; font-size: 1rem; box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary); color: white; padding: 16px;
+            border: none; border-radius: 14px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        #results { margin-top: 2rem; display: none; }
+
+        .interaction-card {
+            background: #fff1f2; border-left: 6px solid var(--danger);
+            padding: 1.5rem; border-radius: 14px; margin-bottom: 1.5rem;
+            font-size: 0.95rem; line-height: 1.6;
+        }
+
+        .drug-title { font-weight: 800; color: var(--danger); text-transform: uppercase; margin-bottom: 10px; display: block; }
+
+        .loader { text-align: center; padding: 20px; color: var(--primary); font-weight: bold; }
+
+        .disclaimer {
+            font-size: 0.75rem; color: #64748b; text-align: center;
+            margin-top: 3rem; border-top: 1px solid #f1f5f9; padding-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Vani's D2D interactions using AI</h1>
+    <p class="tagline">Official FDA Safety Analysis Engine</p>
+
+    <div class="input-group">
+        <input type="text" id="drugInput" placeholder="Enter drug names (e.g. Warfarin, Ibuprofen)">
+        <button onclick="analyzeWithFDA()">Analyze FDA Labels</button>
+    </div>
+
+    <div id="results"></div>
+
+    <div class="disclaimer">
+        <strong>FDA DATA SOURCE:</strong> Information retrieved via openFDA. This is for educational use only. 
+        Always consult a physician before making medication changes.
+    </div>
+</div>
+
+<script>
+    async function analyzeWithFDA() {
+        const input = document.getElementById('drugInput').value;
+        const resultsDiv = document.getElementById('results');
+        const drugs = input.split(',').map(d => d.trim()).filter(d => d.length > 0);
+
+        if (drugs.length === 0) {
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `<div class="interaction-card" style="background:#eff6ff; border-color:#6366f1; color:#1e40af">Please enter at least one medication name.</div>`;
+            return;
+        }
+
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = '<div class="loader">🔍 Scanning FDA Label Database...</div>';
+
+        try {
+            let html = "<h3>FDA Interaction Profiles:</h3>";
+            
+            for (const name of drugs) {
+                // openFDA Drug Label Search
+                const url = `https://api.fda.gov/drug/label.json?search=openfda.generic_name:"${encodeURIComponent(name)}"+openfda.brand_name:"${encodeURIComponent(name)}"&limit=1`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.results && data.results[0]) {
+                    const label = data.results[0];
+                    const interactionText = label.drug_interactions || ["No specific interaction data listed on the primary FDA label."];
+                    
+                    html += `
+                        <div class="interaction-card">
+                            <span class="drug-title">${name}</span>
+                            ${interactionText[0]}
+                        </div>`;
+                } else {
+                    html += `
+                        <div class="interaction-card" style="background:#f1f5f9; border-color:#cbd5e1; color:#475569">
+                            <span class="drug-title" style="color:#475569">${name}</span>
+                            Could not locate an official FDA label for this entry.
+                        </div>`;
+                }
+            }
+            resultsDiv.innerHTML = html;
+
+        } catch (e) {
+            console.error(e);
+            resultsDiv.innerHTML = `<div class="interaction-card">Connection Error: The FDA database is currently unreachable.</div>`;
+        }
+    }
+</script>
+</body>
+</html>
